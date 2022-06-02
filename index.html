@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event inspector</title>
+
+</head>
+
+<body>
+  <!-- <input id="event-object" type="text" value="window" style="padding-bottom:5px"></button> -->
+  <!-- <button id="change-object">Change object</button> -->
+  <button id="select-all">Select all</button>
+  <button id="deselect-all">Deslect all</button>
+  <button id="clear-log">Clear log</button>
+  <div style="display:flex;">
+    <div id="event-list"></div>
+    <!-- <div id="event-log"></div> -->
+    <div style="display:flex; flex-direction: column;">
+      <!-- <button id="log-toggle">Start</button> -->
+      <textarea id="event-log" style="height: 500px"></textarea>
+
+    </div>
+    <div style="display:flex; flex-direction: column;">
+      <textarea id="window-size-log" style="width: 200px; height: 500px"></textarea>
+    </div>
+  </div>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+
+  <script data-consolejs-channel="e6f326fe-42d2-4620-bafd-03244e1fd291"
+    src="https://remotejs.com/agent/agent.js"></script>
+
+  <script>
+
+    $(document).ready(function () {
+
+      updateResizeLogs();
+
+
+      // console.log($(window).height());
+      // console.log($(window).width());
+      // console.log($(document).height());
+      // console.log($(document).width());
+      // console.log(window.screen.height);
+      // console.log(window.screen.width);
+
+    });
+
+    function updateResizeLogs() {
+      // console.log($(window).height());
+      // console.log($(window).width());
+      // console.log($(document).height());
+      // console.log($(document).width());
+      // console.log(window.screen.height);
+      // console.log(window.screen.width);
+
+      var eventLog = document.getElementById('window-size-log');
+      eventLog.value += '********************* \r\n';
+      eventLog.value += 'window width: ' + $(window).width() + '\r\n';
+      eventLog.value += 'window height: ' + $(window).height() + '\r\n';
+      eventLog.value += 'document width: ' + $(document).width() + '\r\n';
+      eventLog.value += 'document height: ' + $(document).height() + '\r\n';
+      eventLog.value += 'screen width: ' + window.screen.width + '\r\n';
+      eventLog.value += 'screen height: ' + window.screen.height + '\r\n';
+
+      eventLog.scrollTop = eventLog.scrollHeight
+    }
+
+    function _isEvent(prop) {
+      if (0 !== prop.indexOf("on")) {
+        return false;
+      }
+
+      return true;
+    }
+
+    var eventObj;
+    var ignoreOnStart = ["onclick", "onmousemove", "onpointermove", "onpointerrawupdate", "onscroll", "onwheel"]
+
+    // document.getElementById('change-object').onclick = function (event) {
+    //   debugger
+    //   var obj = document.getElementById('event-object').value;
+    //   initEvents(obj, ignoreOnStart);
+    // };
+
+    document.getElementById('clear-log').onclick = function (event) {
+      var eventLog = document.getElementById('event-log');
+      eventLog.value = "";
+    };
+
+    document.getElementById('select-all').onclick = function (event) {
+      for (var prop in eventObj) {
+        if (_isEvent(prop)) {
+          window[prop] = function (event) { };
+          let element = document.getElementById(prop);
+          element.checked = true;
+        }
+      }
+
+      updateEvents();
+    };
+
+    document.getElementById('deselect-all').onclick = function (event) {
+      for (var prop in eventObj) {
+        if (_isEvent(prop)) {
+          window[prop] = function (event) { };
+          let element = document.getElementById(prop);
+          element.checked = false;
+        }
+      }
+
+      updateEvents();
+    };
+
+
+    function initEvents(obj, ignore) {
+      eventObj = obj;
+      var eventList = document.getElementById('event-list');
+      eventList.innerHTML = "";
+      var eventLog = document.getElementById('event-log');
+
+      var result = [];
+      for (var prop in obj) {
+        if (_isEvent(prop)) {
+          eventList.innerHTML += `<input type="checkbox" onchange="updateEvents();" id="${prop}" name="${prop}" value="${prop}" ${(ignore && ignore.includes(prop)) ? "" : "checked"}><label for="${prop}">"${prop}"</label><br>`;
+        }
+      }
+
+      updateEvents(ignore);
+    }
+
+    function updateEvents(ignore) {
+      var eventList = document.getElementById('event-list');
+      var eventLog = document.getElementById('event-log');
+
+      var result = [];
+      for (var prop in eventObj) {
+        if (_isEvent(prop)) {
+          window[prop] = function (event) { };
+          let element = document.getElementById(prop);
+
+          if (element.checked && !(ignore && ignore.includes(prop))) {
+            window[prop] = function (event) {
+              console.log(event.type);
+              eventLog.value += event.type + '\r\n';
+              eventLog.scrollTop = eventLog.scrollHeight
+
+              if (event.type === 'resize') {
+                updateResizeLogs();
+              }
+
+              if (event.type === 'pointercancel') {
+              }
+            };
+          }
+        }
+      }
+
+      return result;
+    }
+
+
+    initEvents(window, ignoreOnStart);
+
+    // setInterval(() => {
+    //   if (document.hasFocus()) {
+    //     console.log('✅ window has focus');
+    //   } else {
+    //     console.log('⛔️ window does NOT have focus');
+    //   }
+    // }, 2000);
+
+    var ua = window.navigator.userAgent;
+    var iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i);
+    var webkit = !!ua.match(/WebKit/i);
+    var iOSSafari = iOS && webkit && !ua.match(/CriOS/i);
+    if (iOS && !iOSSafari) {
+      alert('Early-Insights is only supported by Safari on IOS.');
+    }
+
+    // isWebSocketsSupported() {
+    //     // function nll(o) {
+    //     //     return CS.undefined === typeof o || null === o;
+    //     // }
+
+    //     if (!window.WebSocket) {
+    //         if (!this.check_ws_object()) {
+    //             alert("This browser doesn't support HTML5 Web Sockets!");
+    //             return false;
+    //         }
+    //     }
+    //     return true;
+    // }
+
+    // if(/CriOS/i.test(navigator.userAgent) &&
+    // /iphone|ipod|ipad/i.test(navigator.userAgent)){
+    //   eventLog.value += 'chrome' + '\r\n';
+    // }else{
+    //   eventLog.value += 'safari' + '\r\n';
+    // }
+
+  </script>
+</body>
+
+
+
+</html>
